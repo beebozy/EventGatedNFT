@@ -5,6 +5,8 @@ import "@openzeppelin/contracts/interfaces/IERC721.sol";
 contract  Event{
     IERC721 public token;
     address public owner;
+    uint public eventNumbers;
+    uint public  attendeeNumber;
     struct Events{
         string name;
         bool isCreated;
@@ -14,8 +16,8 @@ constructor(){
     owner=msg.sender;
 }
 
-uint eventNumbers;
-uint attendeeNumber;
+
+
 Events[] public events;
 // When we register we should have a kind of erc721 address 
 //events EventsRegistered(address indexed token, uint eventNumber);
@@ -35,12 +37,13 @@ function createEvent(address nftAdress, string memory _name)external{
 
    // require(msg.sender!=address(0),"Not a valid initiator");
    require(nftAdress!=address(0),"Can't be a valid token");
-    events.push(Events(_name,true,nftAdress));
+    
         // ;
         uint countEvent=eventNumbers+1;
         acceptableAddresses[nftAdress][countEvent]=true;
         //getEventNumbers[nftAddress]=countEvent;
         eventNumbers=countEvent;
+        events.push(Events(_name,true,nftAdress));
     emit EventRegistered(nftAdress,countEvent);
     
     
@@ -49,7 +52,7 @@ function createEvent(address nftAdress, string memory _name)external{
 function registerEvent(address nftAddressOfAttendee)external{
 
 require(nftAddressOfAttendee!=address(0),"Not in the pool");
-require(token.balanceOf(nftAddressOfAttendee)>1,"You must have an ERC721");
+require(token.balanceOf(nftAddressOfAttendee)>0,"You must have an ERC721");
 require(acceptableAddresses[nftAddressOfAttendee][eventNumbers]==true,"Your address must be in the pool");
 require(attendeeNumber<=5 && acceptableAddresses[nftAddressOfAttendee][eventNumbers],"Attendee cannot exceed the no");
 

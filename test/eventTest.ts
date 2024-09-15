@@ -1,101 +1,88 @@
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { expect } from "chai";
+import exp from "constants";
 import hre, { ethers } from "hardhat";
 
-describe("Event Contract", function () {
-  async function deployEvent() {
-    const [owner, otherAccount, thirdAccount] = await hre.ethers.getSigners();
-    const NFT = await hre.ethers.getContractFactory("NFT");
-    const nftToken = await NFT.deploy(); // Deploy the NFT contract first
+describe("Event contract", function () {
 
-    const EventContract = await hre.ethers.getContractFactory("Event");
-    const eventContractDeploy = await EventContract.deploy(); // Deploy the Event contract
-    //await eventContractDeploy.deployed();
+  // Fixture to deploy the NFT contract
+  async function deployToken() {
+    const tokenFactory = await hre.ethers.getContractFactory("NFT");
+    const deploytoken = await tokenFactory.deploy(); // Deploy the NFT contract
+   // await deployToken.deployed(); // Ensure the deployment completes
 
-    return { owner, otherAccount, thirdAccount, eventContractDeploy, nftToken };
+    return { deploytoken };
   }
 
+  // Fixture to deploy the Event contract
+  async function deployContract() {
+    const [owner, otherAddress] = await hre.ethers.getSigners();
+    const { deploytoken } = await loadFixture(deployToken); // Load the token fixture
+    const eventFactory = await hre.ethers.getContractFactory("Event");
+    const deployEventContract = await eventFactory.deploy(); // Deploy the Event contract
+    //await deployEventContract.deployed(); // Ensure the deployment completes
+
+    return { owner, otherAddress, deployEventContract, deploytoken };
+  }
+
+  // Test the deployment
   describe("Deployment", function () {
-    it("should set the owner correctly", async function () {
-      const { owner, eventContractDeploy } = await loadFixture(deployEvent);
+    it("should set the correct owner", async function () {
+      const { owner, deployEventContract } = await loadFixture(deployContract);
 
-      // Check if the owner is set correctly
-      expect(await eventContractDeploy.owner()).to.equal(owner.address);
+      // Check that the owner variable in the contract is set correctly
+      expect(await deployEventContract.owner()).to.equal(owner.address);
+    });
+    it("should set the number of event ", async function (){
+      const {deployEventContract}= await loadFixture(deployContract);
+      // it should set the event number to zer0
+      expect(await deployEventContract.eventNumbers()).to.equal(0);
+
     });
   });
 
-  describe("Event Creation", function () {
-    it("should create an event successfully", async function () {
-      const { owner, eventContractDeploy, nftToken } = await loadFixture(deployEvent);
+  describe ("Create Event", function(){
+    it("It should not return adddress zero", async function(){
+      const{deployEventContract,deploytoken,owner}= await loadFixture(deployContract);
 
-      // Create an event
-      await expect(eventContractDeploy.connect(owner).createEvent(nftToken, "Test Event"))
-        .to.emit(eventContractDeploy, "EventRegistered") // Ensure the event emits correctly
-        .withArgs(nftToken, 1);
-
-      // Check the details of the created event
-      const eventData = await eventContractDeploy.events(0);
-      expect(eventData.name).to.equal("Test Event");
-      expect(eventData.isCreated).to.be.true;
-      expect(eventData.acceptableAdresses).to.equal(nftToken);
+    await  expect( deployEventContract.createEvent(ethers.ZeroAddress,"nft event")).to.be.revertedWith("Can't be a valid token");
     });
-
-    it("should fail to create an event if not the owner", async function () {
-      const { otherAccount, eventContractDeploy, nftToken } = await loadFixture(deployEvent);
-
-      // Other accounts should not be able to create events
-      await expect(
-        eventContractDeploy.connect(otherAccount).createEvent(nftToken, "Invalid Event")
-      ).to.be.revertedWith("Not an owner");
+    it("It should emit an Event", async function () {
+      
+      const{deploytoken,deployEventContract}= await loadFixture(deployContract);
+      await expect( deployEventContract.createEvent(deploytoken,"nft Event")).to.emit(deployEventContract,"EventRegistered").withArgs(deploytoken,1);
     });
-  });
+  })
 
-  describe("Event Registration", function () {
-    /*it("should allow valid users to register for an event", async function () {
-      const { owner, otherAccount, eventContractDeploy, nftToken } = await loadFixture(deployEvent);
-
-      // Mint NFT to the otherAccount for eligibility
-      await nftToken.mint(otherAccount.address, "https://token-uri.com");
-
-      // Create an event
-      await eventContractDeploy.connect(owner).createEvent(nftToken.address, "Test Event");
-
-      // Register the otherAccount for the event
-      await expect(eventContractDeploy.connect(otherAccount).registerEvent(otherAccount.address))
-        .to.emit(eventContractDeploy, "EVentBooked")
-        .withArgs(otherAccount.address, 1);
-    }); */
-
-    it("should fail to register if the user does not own an NFT", async function () {
-      const { otherAccount, eventContractDeploy, nftToken } = await loadFixture(deployEvent);
-
-      // Other accounts without NFT should fail to register
-      await expect(
-        eventContractDeploy.connect(otherAccount).registerEvent(otherAccount.address)
-      ).to.be.revertedWith("You must have an ERC721");
+  describe ("Register event", function(){
+    it("It should not return address zero", 
+      async function (){
+        
+        const{deployEventContract}=await loadFixture(deployContract);
+       await expect  (deployEventContract.registerEvent(ethers.ZeroAddress)).to.be.revertedWith("Not in the pool");
+      
     });
-  });
+    it("Should check if registration are met", async function () {
+      const {owner,deploytoken,deployEventContract}=await loadFixture(deployContract);
+      
+     // const eventNumber= deployEventContract.eventNumbers();
+// Mint an ERC721 token to the owner (nftAddressOfAttendee)
+await deploytoken.mint(owner, "1"); // Mint token ID 1 to owner
+// Check that the owner has the ERC721 token
+const balanceERC721 = await deploytoken.balanceOf(owner);
+expect(balanceERC721).to.equal(1);
 
-  describe("Event Removal", function () {
-    it("should allow the owner to remove an event", async function () {
-      const { owner, eventContractDeploy, nftToken } = await loadFixture(deployEvent);
+  })
+  })
+})
+  // 
+  /*describe("Event Registration", function(){
+    it("should return the event numbers", async function () {
+      const{deployEventContract,deploytoken}= await loadFixture(deployContract);
+      
+      
+    })
+      
+  })*/
+  
 
-      // Create an event
-      await eventContractDeploy.connect(owner).createEvent(nftToken, "Test Event");
-
-      // Remove the event
-      await expect(eventContractDeploy.connect(owner).removeEvent(nftToken))
-        .to.emit(eventContractDeploy, "EventRemoved")
-        .withArgs(nftToken, 1);
-    });
-
-    it("should fail to remove an event by non-owner", async function () {
-      const { otherAccount, eventContractDeploy, nftToken } = await loadFixture(deployEvent);
-
-      // Non-owner should not be able to remove an event
-      await expect(
-        eventContractDeploy.connect(otherAccount).removeEvent(nftToken)
-      ).to.be.revertedWith("Not an owner");
-    });
-  });
-});
