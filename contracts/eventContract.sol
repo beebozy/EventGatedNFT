@@ -18,7 +18,8 @@ constructor(){
 
 
 
-Events[] public events;
+Events[] public events; 
+// add 
 // When we register we should have a kind of erc721 address 
 //events EventsRegistered(address indexed token, uint eventNumber);
 mapping(address => mapping(uint => bool)) public acceptableAddresses;
